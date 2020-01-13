@@ -6,8 +6,17 @@
     width: 100%;
     height: 40rem;
     border: solid black 2px;
+    font-size: 50px;
 }
 
 #smooth-move {
     transition: all 0.1s linear;
+}
+
+#final {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: white;
+
 }

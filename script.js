@@ -1,8 +1,9 @@
 class GameObject {
+    self = this;
     newObj;
     points;
     frame = document.getElementById("main-frame");
-    baseSpeed = 15;
+    baseSpeed = 10;
     acceleration = 1;
     speed;
     top;
@@ -21,10 +22,11 @@ class GameObject {
         this.maxTop = position.top;
         this.maxRight = position.right;
         this.maxBottom = position.height;
-        this.newObj = document.createElement("div");
+        this.newObj = document.createElement("IMG");
         this.newObj.setAttribute("id","smooth-move");
+
         this.frame.appendChild(this.newObj);
-        this.newObj.style.backgroundColor = "blue";
+        // this.newObj.style.backgroundColor = "blue";
         this.newObj.style.width = width + "px";
         this.newObj.style.height = height + "px";
         this.newObj.style.position = "relative";
@@ -35,13 +37,11 @@ class GameObject {
     } 
      
     move(X) {
+        
         this.left = this.left-X;
         this.newObj.style.left = this.left + "px";
     }
-    death() {
-        console.log("not implemented");
-        
-    }
+    
 
     
 
@@ -49,47 +49,75 @@ class GameObject {
 }
 class Player extends GameObject {
     constructor(Xpos, Ypos) {
-        super(Xpos, Ypos,40,80);
-        this.speed = 30;
+        super(Xpos, Ypos,100,60);
+        this.newObj.setAttribute("src", "pose/dima.png");
+        this.speed = 25;
     }
     move(Y) {
+        var last = this.top;
         this.top = this.top + this.speed*Y;
+        
+        if(this.newObj.getBoundingClientRect().top <= this.frame.getBoundingClientRect().top || this.newObj.getBoundingClientRect().bottom >= this.frame.getBoundingClientRect().bottom) {
+            if(this.newObj.getBoundingClientRect().top <= this.frame.getBoundingClientRect().top) {
+                this.top = last + 20;
+            }else {
+                this.top = last - 20;
+            }
+        }
         this.newObj.style.top = this.top + "px";
     }
 
-}
 
-class Enemy extends GameObject {
-    dead;
-    constructor(Xpos,Ypos) {
-        super(Xpos,Ypos,80,40);
-        this.dead = false;
-    }
-    run(speed) {
-        this.left = this.left - (speed - this.baseSpeed);
-        this.newObj.style.left = this.left + "px";
-    }
-    caught(positionX,positionY) {
-        if(this.newObj.left == positionX && this.newObj.top == positionY) {
-            this.death();
-        }
-
-    }
-    death() {
-        this.points ++;
-        console.log(this.points);
-        
-        this.frame.removeChild(this.newObj);
-        delete this.newObj;
-    }
     
 }
+
+var Lista = ["pose/Untitled-2.png","pose/chitu.png","pose/delia.png","pose/chirieci.png","pose/oana.png","pose/andreea.png","pose/elena.png", "pose/razvan.png", "pose/stef.png", "pose/soare.png",];
+class Enemy extends GameObject {
+    dead;
+    self  = this;
+    constructor(Xpos,Ypos) {
+        super(Xpos,Ypos,80,50);
+        var choice = Math.floor(Math.random()*Lista.length);
+        this.newObj.setAttribute("src", Lista[choice]);
+        console.log(Lista.length);
+        
+        Lista.splice(choice,1);
+        this.dead = false;
+    }
+    checkBounds(player) {
+        if(this.newObj.getBoundingClientRect().left<=this.frame.getBoundingClientRect().left-10) {
+            this.frame.removeChild(this.newObj);
+            return false;
+        }
+      
+            return true;
+    }
+    checkPlayer(player) {
+
+        var p = player.getBoundingClientRect();
+        var e = this.newObj.getBoundingClientRect();
+        if((e.left < p.right && e.right > p.left) && (e.top < p.bottom && e.bottom > p.top)) {
+            
+            this.frame.removeChild(this.newObj);
+            return false;
+        }
+            return true;
+    }
+    run(speed) {
+        
+        this.left = this.left - (speed - this.baseSpeed)*4;
+        this.newObj.style.left = this.left + "px";
+        return true;
+    }
+
+}
 class GameFrame {
-    points;
+    points = 0;
+    List = new Array();
     refference = new GameObject(0,0);
     player;
     X;
-    enemy;
+    nrEnemy = 1;
     Y;
     running;
     i;
@@ -102,35 +130,53 @@ class GameFrame {
         this.player = new Player(20,300);
     }
     generateEnemy() {
-        if(this.enemy == null) {
-            this.enemy = new Enemy(this.refference.maxLeft-50,this.refference.maxBottom-130);
+        if(this.nrEnemy <= 5) {
+            this.List.push(new Enemy(this.refference.maxLeft-50  ,this.refference.maxBottom - 130 - Math.floor(Math.random() * 540)));
+            this.nrEnemy +=1;
+        }
+    }
+    removeEnemy() {
+        for (let i = 0; i < this.List.length; i++) {
+            if(!this.List[i].checkBounds(this.player.newObj)) {
+                this.List.shift();
+                this.nrEnemy -=1;
+                return true;
+            }
+            if(!this.List[i].checkPlayer(this.player.newObj)) {
+                this.points +=1;
+                this.List.shift();
+                this.nrEnemy -=1;
+                return true;
+            }
+
         }
     }
     stop() {
-        console.log(this.player.maxBottom,this.player.maxLeft,this.player.maxRight,this.player.maxTop);
+     var frame = document.getElementById("main-frame");
+     frame.removeChild(this.player.newObj);
+     frame.innerHTML = "Ai picat " + this.points + " studenti<br> Doar Topa a trecut<br>ctrl+R pentru a juca din nou";
         
     }
     start() {
         
         var time = 0;
         this.i = setInterval(() => {
-            this.update();
-            if(this.running==false) {
-                this.stop();
-                clearInterval(this.i);
-            }
+            // if
+            // this.player.speed += this.player.acceleration;
             if(time == 1000) {
-                this.player.speed += this.player.acceleration;
-                console.log(this.player.speed);
                 time = 0;
                 
+            }
+            this.update(time);
+            if(this.running==false||this.nrEnemy==1) {
+                this.stop();
+                clearInterval(this.i);
             }
             time+=100;
         }, 100);
         
     }
     caseInput() {
-        console.log(this.X+" "+this.Y);
         
         document.addEventListener("keydown", event => {
             switch (event.keyCode) {
@@ -151,12 +197,20 @@ class GameFrame {
             }
         });
     }
-    update() {
+    update(time) {
         this.caseInput();
         this.player.move(this.Y);
-        this.generateEnemy();
-        this.enemy.run(this.player.speed);
-        this.enemy.caught(this.player.left+80,this.player.top);
+        if(time == 0) {
+            if(Lista.length>0){
+                console.log(this.nrEnemy);
+                
+                this.generateEnemy();
+            }
+        }
+        for(var i = 0; i< this.List.length; i++){
+            this.List[i].run(this.player.speed);
+        }
+        this.removeEnemy();
     }
 }
 
